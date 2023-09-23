@@ -31,10 +31,10 @@ const blogs = [
 beforeEach(async () => {
 
 	await Blog.deleteMany({})
-	let blogObject = new Blog(blogs[0])
-	await blogObject.save()
-	blogObject = new Blog(blogs[1])
-	await blogObject.save()
+
+	const blogObjects = blogs.map(blog => new Blog(blog))
+	const blogPromises = blogObjects.map(blog => blog.save())
+	await Promise.all(blogPromises)
 })
 
 test('blogs are returned as JSON', async () =>{
@@ -54,11 +54,11 @@ test('returned two blogs', async () => {
 
 }, 100000)
 
-test('first blog is about react', async () => {
+test('first blog is about statement', async () => {
 	
 	const response = await api.get('/api/blogs')
 
-	expect(response.body[0].title).toBe('React patterns')
+	expect(response.body[0].title).toBe('Go To Statement Considered Harmful')
 }, 100000)
 
 test('returned blogs have id', async () => {
@@ -142,6 +142,51 @@ describe('title and url', () => {
 
 	expect(response.body[response.body.length - 1].url).toBeDefined()
 	
+		
+	})
+})
+
+
+describe('deletion blog', () => {
+	
+	test('delete is not a sucess without a valid id',
+	async () => {
+		
+		await api.delete('/api/blogs/7').expect(400)
+
+	}, 100000)
+
+	test('deletion is a sucess with a valid id', 
+	async () => {
+		let lengthBefore = await Blog.find({})
+
+		await api.delete(`/api/blogs/${lengthBefore[0].id}`).expect(204)
+		const newBlogs = await Blog.find({})
+		expect(newBlogs).toHaveLength(lengthBefore.length-1)
+	} )
+})
+
+describe('update a blog', () => {
+
+	test('is updated', async () => {
+
+		const array = await Blog.find({})
+
+		const newObject = {
+			title: array[0].title, 
+			author: 'Jonathan',
+			url: array[0].url,
+			likes: array[0].likes,
+		}
+
+		await api
+		.put(`/api/blogs/${array[0].id}`)
+		.send(newObject)
+		.expect(204)
+
+		const modified = await Blog.findById(array[0].id)
+		expect(modified.author).toBe('Jonathan')
+
 		
 	})
 })
