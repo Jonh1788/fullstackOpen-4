@@ -1,4 +1,3 @@
-const { log } = require('console')
 const crypto = require('crypto')
 
 const sign = (objeto, secret) => {
@@ -34,10 +33,8 @@ const verify = (token, secret) => {
 	return JSON.parse(decryptedData)
 }
 
-const token = sign({name:"Jonathan"}, "tattoo")
 
-console.log(token)
-
-const decryptToken = verify(token, "tattooe")
-
-console.log(decryptToken)
+module.exports = {
+	sign,
+	verify
+}
