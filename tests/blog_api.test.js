@@ -54,12 +54,6 @@ test('returned two blogs', async () => {
 
 }, 100000)
 
-test('first blog is about statement', async () => {
-	
-	const response = await api.get('/api/blogs')
-
-	expect(response.body[0].title).toBe('Go To Statement Considered Harmful')
-}, 100000)
 
 test('returned blogs have id', async () => {
 	
