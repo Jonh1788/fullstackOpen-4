@@ -1,7 +1,8 @@
 const loginRouter = require('express').Router()
 const bcrypt = require('bcrypt')
 const User = require('../models/user')
-const hmJWT = require('../utils/hmJWT')
+const jwt = require('jsonwebtoken')
+const tokenExtractor = require('../middlewares/tokenExtractor')
 
 
 loginRouter.post('/', async (req, res) => {
@@ -24,7 +25,7 @@ loginRouter.post('/', async (req, res) => {
 		id: user._id
 	}
 
-	const token = hmJWT.sign(userAuthenticate, process.env.SECRET)
+	const token = jwt.sign(userAuthenticate, process.env.SECRET)
 
 	return res.status(201).json({ token })
 
@@ -32,10 +33,9 @@ loginRouter.post('/', async (req, res) => {
 })
 
 
-loginRouter.post('/verify', async (req, res) => {
-	const { token } = req.body
+loginRouter.post('/verify' ,async (req, res) => {
 
-	const user = hmJWT.verify(token, process.env.SECRET)
+	const user = jwt.verify(req.token, process.env.SECRET)
 
 	return res.status(200).json({user})
 })

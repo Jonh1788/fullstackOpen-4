@@ -1,6 +1,7 @@
 const blogRouter = require("express").Router();
 const Blog = require("../models/blog");
 const User = require("../models/user")
+const jwt = require("jsonwebtoken")
 
 
 blogRouter.get("/", async (request, response) => {
@@ -12,29 +13,38 @@ blogRouter.get("/", async (request, response) => {
 });
 
 blogRouter.post("/", async (request, response) => {
-    const user = await User.find({})
-    const blogWithUser = request.body
-    blogWithUser.user = user[0].id
-    const blog = new Blog(blogWithUser);
-    const blogResult = await blog.save();
-    
-  await User.findByIdAndUpdate(user[0].id, 
-		{ name: user[0].name, 
-		  username: user[0].username,  
-		blogs: user[0].blogs.concat(blogResult.id)}, 
-		{ new: true, 
-		runValidators: true,
-		context:'query' })
-    response.status(201).json(blogResult);
 
+	
+	if(!request.user){
+		return response.status(401).send({error:'Invalid token'})
+	}
+
+	
+
+	const blog = new Blog({...request.body, user:request.user._id})
+
+	const savedBlog = await blog.save()
+
+	request.user.blogs = request.user.blogs.concat(savedBlog._id)
+	await request.user.save()
+
+	return response.status(201).json(savedBlog)
 });
 
 blogRouter.delete("/:id", async (req, res) => {
 	
+	if(!req.user){
+		return res.status(401).json({error:'Invalid token'})
+	}
 	
-	await Blog.findByIdAndDelete(req.params.id)
-	return res.status(204).end()
-	
+	const blog = await Blog.findById(req.params.id)
+	if(req.user._id.toString() === blog.user.toString()){
+
+		await Blog.findByIdAndDelete(req.params.id)
+		return res.status(204).end()
+	}
+	console.log(typeof(req.user._id))
+	return res.status(401).json({error:'Only creator can erase a blog'})
 })
 
 blogRouter.put("/:id", async (req, res) => {

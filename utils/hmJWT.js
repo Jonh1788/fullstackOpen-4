@@ -7,11 +7,11 @@ const sign = (objeto, secret) => {
 	const pass = crypto.scryptSync(secret, 'salt', 32)
 	const cipher = crypto.createCipheriv("aes-256-cbc", 
 	pass, iv)
-	let encrypedData = cipher.update(objetoString,
+	let encryptedData = cipher.update(objetoString,
 	'utf-8',
 	'hex')
-	encrypedData += cipher.final('hex')
-	return `${encrypedData}.${iv.toString('hex')}`
+	encryptedData += cipher.final('hex')
+	return `${encryptedData}.${iv.toString('hex')}`
 
 }
 

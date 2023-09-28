@@ -2,7 +2,7 @@ const mongoose = require('mongoose')
 const app = require('../app')
 const supertest = require('supertest')
 const Blog = require('../models/blog')
-
+const User = require('../models/user')
 const api = supertest(app)
 
 const blogs = [
@@ -27,6 +27,15 @@ const blogs = [
 
 ]
 
+const user = {
+
+	username:"test",
+	name:"test",
+	password:"test"
+}
+
+let token = ""
+
 
 beforeEach(async () => {
 
@@ -35,6 +44,18 @@ beforeEach(async () => {
 	const blogObjects = blogs.map(blog => new Blog(blog))
 	const blogPromises = blogObjects.map(blog => blog.save())
 	await Promise.all(blogPromises)
+
+	await User.deleteMany({})
+
+	await api.post('/api/users').send(user)
+	const response = await api
+		.post('/api/login')
+		.send({
+			username:user.username, 
+			password:user.password})
+	token = response.body.token
+
+
 })
 
 test('blogs are returned as JSON', async () =>{
@@ -63,17 +84,19 @@ test('returned blogs have id', async () => {
 }, 100000)
 
 test('a valid blog can be added', async () => {
-
+	
 	const newBlog = {
+
 		author:'Aline',
 		title:'Uma vida feliz',
 		url:'example.com'
 		
 	}
-
+	
 	await api
 	.post('/api/blogs')
 	.send(newBlog)
+	.set({authorization:`Bearer ${token}`})
 	.expect(201)
 	.expect('Content-Type', /application\/json/)
 
@@ -97,6 +120,7 @@ test('like property is present', async () => {
 	await api
 	.post('/api/blogs')
 	.send(newBlog)
+	.set({authorization:`Bearer ${token}`})
 	.expect(201)
 	.expect('Content-Type', /application\/json/)
 
@@ -146,15 +170,35 @@ describe('deletion blog', () => {
 	test('delete is not a sucess without a valid id',
 	async () => {
 		
-		await api.delete('/api/blogs/7').expect(400)
+		await api.delete('/api/blogs/7').expect(401)
 
 	}, 100000)
 
 	test('deletion is a sucess with a valid id', 
 	async () => {
+
+
+	const newBlog = {
+		author:'Aline',
+		title:'Uma vida feliz',
+		url:'example.com'
+		
+	}
+
+	const savedBlog = await api
+	.post('/api/blogs')
+	.send(newBlog)
+	.set({authorization:`Bearer ${token}`})
+	.expect(201)
+	.expect('Content-Type', /application\/json/)
+	
 		let lengthBefore = await Blog.find({})
 
-		await api.delete(`/api/blogs/${lengthBefore[0].id}`).expect(204)
+		await api
+			.delete(`/api/blogs/${savedBlog.body.id}`)
+			.set({authorization:`Bearer ${token}`})
+			.expect(204)
+
 		const newBlogs = await Blog.find({})
 		expect(newBlogs).toHaveLength(lengthBefore.length-1)
 	} )
@@ -185,6 +229,21 @@ describe('update a blog', () => {
 	})
 })
 
+it('dont cant add a blog without token', async () => {
+
+	const newBlog = {
+		author:'Aline',
+		title:'Uma vida feliz',
+		url:'example.com'
+		
+	}
+
+	await api
+	.post('/api/blogs')
+	.send(newBlog)
+	.expect(401)
+	
+})
 afterAll(async () => {
 	await mongoose.connection.close()
 })
